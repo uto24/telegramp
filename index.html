@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Ad to Earn</title>
+    
+    <!-- ★★★ আপনার দেওয়া Ad Network SDK Script ★★★ -->
+    <script src='//libtl.com/sdk.js' data-zone='9604026' data-sdk='show_9604026'></script>
+
+    <!-- ============================================= -->
+    <!-- ===             CSS কোড শুরু              === -->
+    <!-- ============================================= -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--tg-theme-bg-color, #f0f2f5);
+            color: var(--tg-theme-text-color, #1c1c1e);
+            text-align: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .container {
+            padding: 25px;
+            background-color: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            color: var(--tg-theme-text-color, #000);
+            font-size: 24px;
+        }
+        #adCount {
+            font-size: 52px;
+            color: var(--tg-theme-button-color, #007bff);
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        #watchAdBtn {
+            width: 100%;
+            background-color: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, white);
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        #watchAdBtn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #watchAdBtn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================================= -->
+    <!-- ===             HTML বডি শুরু             === -->
+    <!-- ============================================= -->
+    <div class="container">
+        <h1>বিজ্ঞাপন দেখুন</h1>
+        <p>আপনি মোট বিজ্ঞাপন দেখেছেন:</p>
+        <h2 id="adCount">0</h2>
+        <p>টি</p>
+        <button id="watchAdBtn">Watch Ad</button>
+    </div>
+
+    <!-- External SDK Scripts -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+
+    <!-- ============================================= -->
+    <!-- ===           JavaScript কোড শুরু           === -->
+    <!-- ============================================= -->
+    <script type="module">
+        // Firebase SDK থেকে প্রয়োজনীয় ফাংশনগুলো ইম্পোর্ট করা হচ্ছে
+        const { initializeApp } = window.firebase;
+        const { getFirestore, doc, getDoc, setDoc, updateDoc, increment } = window.firebase.firestore;
+
+        // আপনার দেওয়া Firebase প্রজেক্টের কনফিগারেশন
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWgG5KdYFoqHPLe53765BfsNQ8-pxGme8",
+            authDomain: "telegam-5ea9f.firebaseapp.com",
+            projectId: "telegam-5ea9f",
+            storageBucket: "telegam-5ea9f.appspot.com",
+            messagingSenderId: "393475568911",
+            appId: "1:393475568911:web:b7fdb4ebb3d3be03df3a7a"
+        };
+
+        // Firebase অ্যাপ ইনিশিয়ালাইজ করা
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Telegram Web App ইনিশিয়ালাইজ করা
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+
+        // HTML এলিমেন্টগুলো ধরা
+        const adCountElement = document.getElementById('adCount');
+        const watchAdBtn = document.getElementById('watchAdBtn');
+
+        // ব্যবহারকারীর ইউনিক আইডি টেলিগ্রাম থেকে নেওয়া
+        const userId = tg.initDataUnsafe?.user?.id.toString();
+
+        if (!userId) {
+            adCountElement.innerText = "N/A";
+            watchAdBtn.disabled = true;
+            watchAdBtn.innerText = "Please open in Telegram";
+            console.error("Telegram user ID not found.");
+        } else {
+            const userRef = doc(db, 'users', userId);
+
+            // পেজ লোড হওয়ার সময় ডেটাবেস থেকে ইউজারের ডেটা আনা
+            (async () => {
+                try {
+                    const docSnap = await getDoc(userRef);
+                    if (docSnap.exists()) {
+                        adCountElement.innerText = docSnap.data().adCount || 0;
+                    } else {
+                        await setDoc(userRef, { adCount: 0, joinedAt: new Date() });
+                        adCountElement.innerText = 0;
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    adCountElement.innerText = "Error";
+                }
+            })();
+
+            // "Watch Ad" বাটনে ক্লিক করলে যা ঘটবে
+            watchAdBtn.addEventListener('click', () => {
+                watchAdBtn.disabled = true;
+                watchAdBtn.innerText = "Loading Ad...";
+
+                show_9604026().then(async () => {
+                    console.log("Ad watched successfully! Rewarding the user.");
+                    try {
+                        await updateDoc(userRef, {
+                            adCount: increment(1)
+                        });
+
+                        const newCount = parseInt(adCountElement.innerText) + 1;
+                        adCountElement.innerText = newCount;
+                        tg.HapticFeedback.notificationOccurred('success');
+                        
+                    } catch (dbError) {
+                        console.error("Error updating database: ", dbError);
+                    } finally {
+                        watchAdBtn.disabled = false;
+                        watchAdBtn.innerText = "Watch Ad";
+                    }
+                }).catch(adError => {
+                    console.error("Failed to show ad:", adError);
+                    tg.HapticFeedback.notificationOccurred('error');
+                    alert("Ad could not be loaded. Please try again.");
+                    watchAdBtn.disabled = false;
+                    watchAdBtn.innerText = "Watch Ad";
+                });
+            });
+        }
+    </script>
+</body>
+</html>
