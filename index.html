@@ -16,7 +16,7 @@
             background-color: var(--tg-theme-bg-color, #f0f2f5);
             color: var(--tg-theme-text-color, #1c1c1e);
             display: flex;
-            flex-direction: column; /* To stack app and log */
+            flex-direction: column;
             height: 100vh;
         }
         .main-container {
@@ -35,17 +35,8 @@
             width: 100%;
             max-width: 400px;
         }
-        h1 {
-            color: var(--tg-theme-text-color, #000);
-            font-size: 24px;
-            margin-top: 0;
-        }
-        #adCount {
-            font-size: 52px;
-            color: var(--tg-theme-button-color, #007bff);
-            margin: 10px 0;
-            font-weight: bold;
-        }
+        h1 { font-size: 24px; margin-top: 0; }
+        #adCount { font-size: 52px; color: var(--tg-theme-button-color, #007bff); margin: 10px 0; font-weight: bold; }
         #watchAdBtn {
             width: 100%;
             background-color: var(--tg-theme-button-color, #007bff);
@@ -58,14 +49,8 @@
             cursor: pointer;
             transition: background-color 0.3s, transform 0.1s;
         }
-        #watchAdBtn:disabled {
-            background-color: #cccccc;
-            color: #666666;
-            cursor: not-allowed;
-        }
-        #watchAdBtn:active:not(:disabled) {
-            transform: scale(0.98);
-        }
+        #watchAdBtn:disabled { background-color: #cccccc; color: #666666; cursor: not-allowed; }
+        #watchAdBtn:active:not(:disabled) { transform: scale(0.98); }
 
         /* === Debug Log CSS === */
         .debug-log-container {
@@ -74,46 +59,36 @@
             color: #a9b7c6;
             padding: 10px;
             font-size: 12px;
-            height: 120px; /* Log box height */
-            overflow-y: auto; /* Enable scrolling */
+            height: 150px; /* Increased height */
+            overflow-y: auto;
             border-top: 2px solid #555;
             box-sizing: border-box;
-            white-space: pre-wrap; /* To wrap long lines */
+            white-space: pre-wrap;
             word-wrap: break-word;
         }
-        .log-entry {
-            border-bottom: 1px solid #444;
-            padding-bottom: 3px;
-            margin-bottom: 3px;
-        }
+        .log-entry { border-bottom: 1px solid #444; padding-bottom: 3px; margin-bottom: 3px; }
         .log-entry.error { color: #ff6b68; }
         .log-entry.success { color: #86d483; }
         .log-entry.info { color: #6897bb; }
     </style>
 </head>
 <body>
-    <!-- Main App HTML -->
     <div class="main-container">
         <div class="app-content">
             <h1>বিজ্ঞাপন দেখুন</h1>
             <p>আপনি মোট বিজ্ঞাপন দেখেছেন:</p>
             <h2 id="adCount">...</h2>
             <p>টি</p>
-            <button id="watchAdBtn">Watch Ad</button>
+            <button id="watchAdBtn" disabled>Loading...</button>
         </div>
     </div>
-    
-    <!-- Debug Log HTML -->
     <div class="debug-log-container" id="debugLog"></div>
 
-    <!-- External SDK Scripts -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
-    <!-- Main JavaScript with Logging -->
     <script type="module">
-        // === Log Functionality ===
         const logContainer = document.getElementById('debugLog');
         function writeLog(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
@@ -121,24 +96,15 @@
             logEntry.className = `log-entry ${type}`;
             logEntry.textContent = `[${timestamp}] ${message}`;
             logContainer.appendChild(logEntry);
-            // Auto-scroll to the bottom
             logContainer.scrollTop = logContainer.scrollHeight;
-            // Also log to browser console for deeper debugging
-            if (type === 'error') {
-                console.error(message);
-            } else {
-                console.log(message);
-            }
+            if (type === 'error') console.error(message); else console.log(message);
         }
 
-        // === Main App Logic ===
         writeLog('App script initialized.');
         
-        // Firebase SDK from window object
         const { initializeApp } = firebase;
         const { getFirestore, doc, getDoc, setDoc, updateDoc, increment } = firebase.firestore;
 
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCWgG5KdYFoqHPLe53765BfsNQ8-pxGme8",
             authDomain: "telegam-5ea9f.firebaseapp.com",
@@ -150,81 +116,102 @@
         
         writeLog('Firebase config loaded.');
         
-        // Initialize Firebase and Telegram App
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const tg = window.Telegram.WebApp;
         
-        writeLog('Firebase & Telegram WebApp initialized.');
         tg.ready();
         tg.expand();
 
-        // HTML Elements
         const adCountElement = document.getElementById('adCount');
         const watchAdBtn = document.getElementById('watchAdBtn');
+        let isProcessing = false; // State to prevent double clicks
 
-        // Get Telegram User ID
         const userId = tg.initDataUnsafe?.user?.id.toString();
 
         if (!userId) {
             writeLog('Telegram user ID not found. App cannot run.', 'error');
             adCountElement.innerText = "N/A";
-            watchAdBtn.disabled = true;
             watchAdBtn.innerText = "Please open in Telegram";
         } else {
             writeLog(`User ID found: ${userId}`, 'success');
             const userRef = doc(db, 'users', userId);
 
-            // Fetch user data on page load
-            (async () => {
-                writeLog('Fetching user data from Firestore...');
+            // Initial data load function
+            async function loadUserData() {
+                writeLog('Fetching user data...');
                 try {
                     const docSnap = await getDoc(userRef);
                     if (docSnap.exists()) {
                         const count = docSnap.data().adCount || 0;
                         adCountElement.innerText = count;
-                        writeLog(`User data found. Ad count: ${count}`, 'success');
+                        writeLog(`User data loaded. Ad count: ${count}`, 'success');
                     } else {
-                        writeLog('New user detected. Creating a new document...');
+                        writeLog('New user detected. Creating document...');
                         await setDoc(userRef, { adCount: 0, username: tg.initDataUnsafe?.user?.username || 'N/A', joinedAt: new Date() });
                         adCountElement.innerText = 0;
-                        writeLog('New user document created successfully.', 'success');
+                        writeLog('New user document created.', 'success');
                     }
+                    watchAdBtn.disabled = false;
+                    watchAdBtn.innerText = "Watch Ad";
                 } catch (error) {
-                    writeLog(`Error fetching user data: ${error.message}`, 'error');
+                    writeLog(`Error during initial data load: ${error.message}`, 'error');
                     adCountElement.innerText = "DB Error";
+                    watchAdBtn.innerText = "Retry";
+                    watchAdBtn.disabled = false;
                 }
-            })();
+            }
 
-            // "Watch Ad" button click event
+            // Load data on start
+            loadUserData();
+
+            // Watch Ad button click event
             watchAdBtn.addEventListener('click', () => {
-                writeLog('"Watch Ad" button clicked.');
+                if (isProcessing) {
+                    writeLog('Already processing a request. Please wait.', 'info');
+                    return;
+                }
+
+                writeLog('Watch Ad button clicked.');
+                isProcessing = true;
                 watchAdBtn.disabled = true;
                 watchAdBtn.innerText = "Loading Ad...";
 
+                // Ad Timeout: if ad doesn't respond in 10 seconds, reset the button
+                const adTimeout = setTimeout(() => {
+                    writeLog('Ad function timed out after 10 seconds.', 'error');
+                    isProcessing = false;
+                    watchAdBtn.disabled = false;
+                    watchAdBtn.innerText = "Watch Ad";
+                    alert("Ad failed to load. Please try again.");
+                }, 10000); // 10 seconds
+
                 // Call ad function
                 show_9604026().then(async () => {
-                    writeLog('Ad shown successfully. Rewarding user...', 'success');
+                    clearTimeout(adTimeout); // Clear the timeout as ad responded
+                    writeLog('Ad shown successfully! Rewarding user...', 'success');
+                    
                     try {
-                        // Update ad count in Firestore
                         await updateDoc(userRef, { adCount: increment(1) });
-                        writeLog('Firestore adCount incremented successfully.', 'success');
-
-                        // Update UI
-                        const newCount = parseInt(adCountElement.innerText) + 1;
-                        adCountElement.innerText = newCount;
-                        tg.HapticFeedback.notificationOccurred('success');
+                        writeLog('Firestore adCount incremented.', 'success');
                         
+                        const currentCount = parseInt(adCountElement.innerText, 10) || 0;
+                        adCountElement.innerText = currentCount + 1;
+                        tg.HapticFeedback.notificationOccurred('success');
                     } catch (dbError) {
                         writeLog(`DB update failed: ${dbError.message}`, 'error');
                     } finally {
+                        isProcessing = false;
                         watchAdBtn.disabled = false;
                         watchAdBtn.innerText = "Watch Ad";
+                        writeLog('Processing finished.');
                     }
                 }).catch(adError => {
-                    writeLog(`Failed to show ad: ${adError.message || 'Unknown Ad Error'}`, 'error');
+                    clearTimeout(adTimeout); // Clear the timeout
+                    writeLog(`Failed to show ad: ${adError ? adError.message : 'Unknown Ad Error'}`, 'error');
                     tg.HapticFeedback.notificationOccurred('error');
                     alert("Ad could not be loaded. Please try again.");
+                    isProcessing = false;
                     watchAdBtn.disabled = false;
                     watchAdBtn.innerText = "Watch Ad";
                 });
