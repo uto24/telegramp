@@ -1,15 +1,14 @@
 # nixpacks.toml
 
-# Setup Phase: Python 3.11 এবং Poetry ইন্সটল করা হচ্ছে।
+# Setup Phase: আমরা ডিফল্ট প্যাকেজ (`...`) বাদ দিয়ে শুধুমাত্র Python 3.11 এবং Poetry নির্দিষ্ট করছি।
+# এটি Python ভার্সন কনফ্লিক্ট সমাধান করবে।
 [phases.setup]
-nixPkgs = ["...", "python311", "poetry"]
+nixPkgs = ["python311", "poetry", "gcc"] # gcc যোগ করা হয়েছে কারণ কিছু পাইথন প্যাকেজের এটি প্রয়োজন হতে পারে।
 
 # Install Phase: প্যাকেজ ইন্সটল করার কমান্ড।
 [phases.install]
 cmds = [
     "poetry init -n",
-    # requirements.txt ফাইলের প্রতিটি লাইন লুপ করে poetry দিয়ে প্যাকেজ যোগ করা হচ্ছে।
-    # এটি tr কমান্ডের চেয়ে অনেক বেশি নির্ভরযোগ্য।
     "cat requirements.txt | while read -r package; do poetry add \"$package\"; done"
 ]
 
