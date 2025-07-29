@@ -5,7 +5,7 @@ from urllib.parse import unquote, parse_qs
 from datetime import datetime, timezone
 from threading import Thread
 
-import firebase_admin
+import firebase-admin
 from firebase_admin import credentials, db
 from flask import Flask, request, jsonify
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
