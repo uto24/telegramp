@@ -1,15 +1,16 @@
 # nixpacks.toml
 
-# Setup Phase: কোন কোন প্যাকেজ সিস্টেম লেভেলে লাগবে তা বলা হচ্ছে।
-# আমরা সরাসরি Python 3.11 এবং Poetry (প্যাকেজ ম্যানেজার) ব্যবহার করতে বলছি।
+# Setup Phase: Python 3.11 এবং Poetry ইন্সটল করা হচ্ছে।
 [phases.setup]
 nixPkgs = ["...", "python311", "poetry"]
 
 # Install Phase: প্যাকেজ ইন্সটল করার কমান্ড।
 [phases.install]
 cmds = [
-    "poetry init -n",  # ইনিশিয়ালাইজ করে pyproject.toml তৈরি করবে
-    "poetry add $(cat requirements.txt | tr '\n' ' ')", # requirements.txt থেকে প্যাকেজ যোগ করবে
+    "poetry init -n",
+    # requirements.txt ফাইলের প্রতিটি লাইন লুপ করে poetry দিয়ে প্যাকেজ যোগ করা হচ্ছে।
+    # এটি tr কমান্ডের চেয়ে অনেক বেশি নির্ভরযোগ্য।
+    "cat requirements.txt | while read -r package; do poetry add \"$package\"; done"
 ]
 
 # Start Phase: অ্যাপটি কীভাবে চালু করতে হবে।
