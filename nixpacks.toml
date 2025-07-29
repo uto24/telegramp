@@ -1,0 +1,10 @@
+# nixpacks.toml
+
+[phases.setup]
+nixPkgs = ["python311"] # উদাহরণস্বরূপ, Python 3.11 ব্যবহার করার জন্য
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "gunicorn main:app"
